@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>投顾朋友圈内容台</title>
+  <style>
+    :root {
+      --ink: #17211e;
+      --muted: #69736f;
+      --line: #d9dfdc;
+      --paper: #f4f6f3;
+      --white: #fff;
+      --green: #176b55;
+      --green-dark: #11231e;
+      --green-soft: #e7f0ec;
+      --red: #a84438;
+      --shadow: 0 10px 28px rgba(23, 42, 35, .07);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      letter-spacing: 0;
+    }
+    button, input, textarea, select { font: inherit; }
+    button { border: 0; cursor: pointer; }
+    .app { min-height: 100vh; display: grid; grid-template-columns: 248px minmax(0, 1fr); }
+    aside {
+      position: sticky; top: 0; height: 100vh; padding: 26px 18px;
+      display: flex; flex-direction: column; background: var(--green-dark); color: white;
+    }
+    .brand { padding: 4px 8px 24px; border-bottom: 1px solid rgba(255,255,255,.12); }
+    .brand b { display: block; font-size: 19px; }
+    .brand span { display: block; margin-top: 6px; color: #a8b8b2; font-size: 12px; }
+    nav { display: grid; gap: 6px; margin-top: 22px; }
+    nav button {
+      padding: 12px 13px; border-radius: 6px; background: transparent;
+      color: #adbbb6; text-align: left;
+    }
+    nav button.active { color: white; background: rgba(255,255,255,.1); }
+    .status {
+      margin-top: auto; padding: 14px; border: 1px solid rgba(255,255,255,.13);
+      border-radius: 7px; color: #c9d3cf; font-size: 12px; line-height: 1.65;
+    }
+    .status-row { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; color: white; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #d1a23c; }
+    .dot.ok { background: #4ec18d; }
+    main { width: 100%; max-width: 1480px; margin: 0 auto; padding: 28px 32px 60px; }
+    .topbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+    h1 { margin: 0; font-size: 27px; }
+    .subtitle { margin: 7px 0 0; color: var(--muted); font-size: 13px; }
+    .date { padding: 8px 11px; border: 1px solid var(--line); border-radius: 6px; background: white; color: var(--muted); font-size: 12px; }
+    .view[hidden] { display: none; }
+    .category-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .category {
+      min-height: 104px; padding: 17px; border: 1px solid var(--line); border-radius: 8px;
+      background: white; color: var(--ink); text-align: left; box-shadow: var(--shadow);
+    }
+    .category.active { border-color: var(--green); box-shadow: 0 0 0 3px rgba(23,107,85,.09); }
+    .category b { display: block; margin-bottom: 7px; font-size: 15px; }
+    .category span { color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .workspace { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 18px; align-items: start; }
+    .panel { border: 1px solid var(--line); border-radius: 8px; background: white; box-shadow: var(--shadow); }
+    .form-panel { position: sticky; top: 20px; padding: 21px; }
+    .panel-title { margin: 0 0 17px; font-size: 16px; }
+    .field { margin-bottom: 15px; }
+    .field label { display: block; margin-bottom: 7px; color: #46514c; font-size: 12px; font-weight: 700; }
+    input, textarea, select {
+      width: 100%; border: 1px solid #ccd4d0; border-radius: 6px; background: white;
+      color: var(--ink); outline: none;
+    }
+    input, select { height: 41px; padding: 0 10px; }
+    textarea { min-height: 86px; padding: 10px; resize: vertical; line-height: 1.6; }
+    input:focus, textarea:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(23,107,85,.1); }
+    .upload {
+      min-height: 190px; display: grid; place-items: center; overflow: hidden;
+      border: 1px dashed #aebbb5; border-radius: 7px; background: #f7f9f7;
+      color: var(--muted); text-align: center; cursor: pointer;
+    }
+    .upload input { display: none; }
+    .upload b { display: block; margin-bottom: 6px; color: var(--green); }
+    .upload small { font-size: 11px; line-height: 1.55; }
+    .upload img { width: 100%; max-height: 280px; object-fit: contain; background: #eef2ef; }
+    .generate {
+      width: 100%; height: 45px; border-radius: 6px; background: var(--green); color: white; font-weight: 700;
+    }
+    .generate:hover { background: #125b48; }
+    .generate:disabled { opacity: .55; cursor: wait; }
+    .hint { margin: 10px 0 0; color: #7c8682; font-size: 11px; line-height: 1.55; text-align: center; }
+    .results { display: grid; gap: 13px; }
+    .empty { min-height: 360px; display: grid; place-content: center; padding: 30px; text-align: center; }
+    .empty b { font-size: 17px; }
+    .empty p { max-width: 420px; margin: 9px 0 0; color: var(--muted); font-size: 13px; line-height: 1.7; }
+    .result-card { overflow: hidden; }
+    .result-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 14px;
+      padding: 17px 19px; border-bottom: 1px solid var(--line);
+    }
+    .result-head b { font-size: 15px; }
+    .badge { padding: 5px 8px; border-radius: 5px; background: var(--green-soft); color: var(--green); font-size: 11px; }
+    .copy { min-height: 180px; margin: 0; padding: 19px; white-space: pre-wrap; font-size: 15px; line-height: 1.9; }
+    .copy:focus { outline: 2px solid rgba(23,107,85,.18); outline-offset: -2px; background: #fcfefd; }
+    .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border-top: 1px solid var(--line); }
+    .meta div { padding: 12px 18px; background: #fafbfa; color: var(--muted); font-size: 11px; line-height: 1.55; }
+    .meta b { display: block; margin-bottom: 4px; color: #42504a; }
+    .actions { display: flex; justify-content: flex-end; gap: 8px; padding: 13px 18px; }
+    .secondary, .copy-btn { height: 35px; padding: 0 12px; border-radius: 5px; font-size: 12px; }
+    .secondary { border: 1px solid var(--line); background: white; color: #52605a; }
+    .copy-btn { background: #1d2a26; color: white; }
+    .error {
+      padding: 14px; border: 1px solid #e6bbb5; border-radius: 7px;
+      background: #fff4f2; color: var(--red); font-size: 13px; line-height: 1.6;
+    }
+    .section-head { padding: 20px 22px; margin-bottom: 15px; }
+    .section-head h2 { margin: 0 0 5px; font-size: 20px; }
+    .section-head p { margin: 0; color: var(--muted); font-size: 12px; }
+    .today-plan {
+      display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; align-items: center;
+      padding: 20px 22px; margin-bottom: 15px; border-left: 4px solid var(--green);
+    }
+    .today-plan h2 { margin: 0 0 6px; font-size: 20px; }
+    .today-plan p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+    .today-mark { padding: 7px 10px; border-radius: 5px; background: var(--green-soft); color: var(--green); font-size: 12px; font-weight: 700; }
+    .week-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; }
+    .week-card { padding: 18px; }
+    .week-card.today-card { border-color: var(--green); box-shadow: 0 0 0 3px rgba(23,107,85,.08); }
+    .week-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+    .week-card h3 { margin: 0; font-size: 15px; }
+    .today-label { color: var(--green); font-size: 10px; font-weight: 700; }
+    .slot { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 9px; align-items: center; padding: 11px 0; border-top: 1px solid #edf0ee; }
+    .slot b { color: var(--green); font-size: 11px; }
+    .slot span { font-size: 12px; line-height: 1.5; }
+    .slot small { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; }
+    .slot-action {
+      width: 29px; height: 29px; border: 1px solid var(--line); border-radius: 5px;
+      background: white; color: var(--green); font-size: 16px; line-height: 1;
+    }
+    .slot-action:hover { border-color: var(--green); background: var(--green-soft); }
+    .style-grid, .phrase-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; }
+    .style-card, .phrase-card { padding: 19px; text-align: left; }
+    .style-card.selected { border-color: var(--green); box-shadow: 0 0 0 3px rgba(23,107,85,.09); }
+    .style-card h3, .phrase-card h3 { margin: 0 0 7px; font-size: 15px; }
+    .style-card p, .phrase-card p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+    .sample { margin-top: 13px; padding: 12px; border-radius: 6px; background: #f6f8f6; font-size: 12px; line-height: 1.65; }
+    .phrase-card button { margin-top: 12px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 5px; background: white; color: var(--green); font-size: 11px; }
+    .toast {
+      position: fixed; right: 22px; bottom: 22px; padding: 10px 14px; border-radius: 6px;
+      background: #17211e; color: white; font-size: 12px; opacity: 0; transform: translateY(7px);
+      pointer-events: none; transition: .2s;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .access-dialog {
+      width: min(420px, calc(100% - 28px)); padding: 0; border: 0; border-radius: 8px;
+      color: var(--ink); box-shadow: 0 24px 70px rgba(10, 28, 22, .28);
+    }
+    .access-dialog::backdrop { background: rgba(10, 24, 20, .56); }
+    .access-content { padding: 25px; }
+    .access-content h2 { margin: 0 0 8px; font-size: 20px; }
+    .access-content p { margin: 0 0 18px; color: var(--muted); font-size: 13px; line-height: 1.65; }
+    .access-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+    .access-actions button { height: 39px; padding: 0 15px; border-radius: 5px; }
+    .access-submit { background: var(--green); color: white; font-weight: 700; }
+    .access-error { min-height: 18px; margin-top: 8px; color: var(--red); font-size: 12px; }
+    @media (max-width: 1080px) {
+      .app { grid-template-columns: 1fr; }
+      aside { position: static; height: auto; padding: 15px; }
+      .brand, .status { display: none; }
+      nav { grid-template-columns: repeat(4, 1fr); margin: 0; }
+      nav button { text-align: center; font-size: 12px; }
+      .workspace { grid-template-columns: 1fr; }
+      .form-panel { position: static; }
+    }
+    @media (max-width: 720px) {
+      main { padding: 20px 13px 40px; }
+      .date { display: none; }
+      nav { grid-template-columns: repeat(2, 1fr); }
+      .category-grid, .week-grid, .style-grid, .phrase-grid { grid-template-columns: 1fr 1fr; }
+      .meta { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 480px) {
+      .category-grid, .week-grid, .style-grid, .phrase-grid { grid-template-columns: 1fr; }
+      .topbar { align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <div class="brand"><b>投顾朋友圈内容台</b><span>让业务每天有内容、有节奏、有表达</span></div>
+      <nav>
+        <button class="active" data-view="createView">AI 生成</button>
+        <button data-view="weekView">发布计划</button>
+        <button data-view="phraseView">表达案例</button>
+      </nav>
+      <div class="status">
+        <div class="status-row"><span class="dot" id="statusDot"></span><b id="statusText">正在检查模型</b></div>
+        <span id="modelText">服务端连接中</span>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div><h1 id="pageTitle">AI 文案生成</h1><p class="subtitle" id="pageSubtitle">四类内容各司其职，营销只在有素材时生成。</p></div>
+        <div class="date" id="today"></div>
+      </header>
+
+      <section class="view" id="createView">
+        <div class="category-grid">
+          <button class="category active" data-category="life"><b>生活日常</b><span>建立亲密感，纯生活，不硬拐投资</span></button>
+          <button class="category" data-category="insight"><b>投资心得与认知</b><span>讲经验、人性、纪律和思考</span></button>
+          <button class="category" data-category="market"><b>盘面观察</b><span>结合实时行情输出专业判断</span></button>
+          <button class="category" data-category="marketing"><b>营销配图文案</b><span>上传素材，AI 读图后生成转化文案</span></button>
+        </div>
+
+        <div class="workspace">
+          <form class="panel form-panel" id="generateForm">
+            <h2 class="panel-title" id="formTitle">生活日常素材</h2>
+            <div id="dynamicFields"></div>
+            <div class="field">
+              <label for="extra">补充要求（可选）</label>
+              <textarea id="extra" placeholder="例如：不要太鸡汤、口语一点、控制在150字以内"></textarea>
+            </div>
+            <div class="field">
+              <label for="voice">业务本人口吻</label>
+              <select id="voice">
+                <option>自然稳重，像本人随手发的</option>
+                <option>口语直接，不绕弯子</option>
+                <option>温和真诚，有亲近感</option>
+                <option>成熟克制，少一些情绪</option>
+              </select>
+            </div>
+            <button class="generate" id="generateBtn" type="submit">AI 生成 3 个版本</button>
+            <p class="hint">根据内容自然分段，不固定段数；开头尽量简洁、有吸引力。</p>
+          </form>
+
+          <div class="results" id="results">
+            <div class="panel empty"><div><b>有素材就填写，没想法也可以直接生成</b><p>生活日常和投资心得支持自动寻找灵感；盘面观察仍以当天真实信息为准。</p></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="weekView" hidden>
+        <header class="panel today-plan" id="todayPlan"></header>
+        <header class="panel section-head"><h2>周日到周五发布计划</h2><p>点击每个时段右侧的箭头：生活和认知可直接生成，盘面与营销会进入素材填写。</p></header>
+        <div class="week-grid" id="weekGrid"></div>
+      </section>
+
+      <section class="view" id="phraseView" hidden>
+        <header class="panel section-head">
+          <h2>表达案例库</h2>
+          <p>模型借鉴角度和节奏，但不会直接套用这些句子；需要新灵感时可以再换一批。</p>
+          <button class="secondary" id="refreshPhrases" type="button">AI 换一批灵感</button>
+        </header>
+        <div class="phrase-grid" id="phraseGrid"></div>
+      </section>
+    </main>
+  </div>
+  <div class="toast" id="toast">已复制</div>
+  <dialog class="access-dialog" id="accessDialog">
+    <form class="access-content" id="accessForm">
+      <h2>输入团队访问口令</h2>
+      <p>首次使用需要验证一次，验证成功后这台设备会自动记住。</p>
+      <div class="field">
+        <label for="accessCodeInput">团队口令</label>
+        <input id="accessCodeInput" type="password" autocomplete="off" placeholder="请输入管理员提供的口令">
+        <div class="access-error" id="accessError"></div>
+      </div>
+      <div class="access-actions">
+        <button class="secondary" id="accessCancel" type="button">取消</button>
+        <button class="access-submit" type="submit">验证并继续</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    const DEPLOYED_API_BASE = "https://momentspywriter-sbyhknnvlf.cn-hangzhou.fcapp.run";
+    const isLocalHost = ["127.0.0.1", "localhost"].includes(window.location.hostname);
+    const isFunctionHost = window.location.hostname.endsWith(".fcapp.run");
+    const API_BASE = window.location.protocol === "file:"
+      ? "http://127.0.0.1:4173"
+      : (isLocalHost || isFunctionHost ? "" : DEPLOYED_API_BASE);
+    const ACCESS_STORAGE_KEY = "moments-team-access-code";
+    const state = { category: "life", imageDataUrl: "", lastPayload: null };
+    let pendingAccessResolve = null;
+    const categoryMeta = {
+      life: { title: "生活日常素材（没想法可留空）", button: "AI 生成生活文案" },
+      insight: { title: "投资心得与认知（没想法可留空）", button: "AI 生成认知文案" },
+      market: { title: "今日盘面信息", button: "AI 生成盘面文案" },
+      marketing: { title: "上传营销素材", button: "AI 读图生成营销文案" }
+    };
+    const fields = {
+      life: `
+        <div class="field"><label for="scene">今天发生了什么（可留空）</label><textarea id="scene" placeholder="有素材就填写；没想法直接留空，AI 会随机找一个生活切入点"></textarea></div>
+        <div class="field"><label for="mood">当时的感受（可留空）</label><input id="mood" placeholder="例如：放松、踏实、有点疲惫"></div>
+        <div class="field"><label for="lifeTone">表达方向</label><select id="lifeTone"><option>真实日常</option><option>温暖治愈</option><option>轻松幽默</option><option>精致生活</option><option>情绪共鸣</option></select></div>`,
+      insight: `
+        <div class="field"><label for="topic">今天想讲的认知（可留空）</label><textarea id="topic" placeholder="有想法就填写；没想法直接留空，AI 会随机选择一个投资认知"></textarea></div>
+        <div class="field"><label for="example">经历或例子（可选）</label><textarea id="example" placeholder="可以写客户常问的问题、自己的观察"></textarea></div>
+        <div class="field"><label for="audienceEmotion">客户当前状态</label><select id="audienceEmotion"><option>焦虑</option><option>怕踏空</option><option>被套</option><option>过度兴奋</option><option>长期观望</option></select></div>`,
+      market: `
+        <div class="field"><label for="marketState">市场状态</label><select id="marketState"><option>震荡分化</option><option>强势上涨</option><option>缩量调整</option><option>低位反弹</option><option>情绪退潮</option></select></div>
+        <div class="field"><label for="hotspot">热点方向</label><input id="hotspot" placeholder="例如：AI、券商、半导体（请按当天实际填写）"></div>
+        <div class="field"><label for="signal">你观察到的信号</label><textarea id="signal" placeholder="例如：量能、资金承接、板块分化等当天真实信号"></textarea></div>
+        <div class="field"><label for="stance">希望表达的态度</label><select id="stance"><option>先观察，不急着下结论</option><option>机会正在显现</option><option>提醒控制风险</option><option>强调主线与节奏</option></select></div>`,
+      marketing: `
+        <div class="field"><label>营销图片</label><label class="upload"><input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp"><span id="uploadPrompt"><b>点击上传图片</b><small>支持 PNG / JPEG / WEBP，最大 8MB<br>模型会直接识别画面和图片文字</small></span><img id="preview" alt="营销素材预览" hidden></label></div>
+        <div class="field"><label for="marketingGoal">希望客户做什么</label><select id="marketingGoal"><option>主动私聊咨询</option><option>领取资料</option><option>报名参加</option><option>了解详情</option></select></div>
+        <div class="field"><label for="marketingContext">补充背景（可选）</label><textarea id="marketingContext" placeholder="例如：这是本周五晚8点的策略直播海报"></textarea></div>`
+    };
+
+    const week = [
+      { day: "周日", index: 0, slots: [["早", "life", "生活日常", "周末状态、阅读、运动"], ["中", "insight", "投资认知", "一周心态与方法"], ["晚", "market", "盘面观察", "下周关注点"]] },
+      { day: "周一", index: 1, slots: [["早", "market", "盘面观察", "开盘前重点"], ["中", "insight", "投资认知", "开局别急着下结论"], ["晚", "life", "生活日常", "工作后的真实状态"]] },
+      { day: "周二", index: 2, slots: [["早", "life", "生活日常", "早餐、通勤、办公"], ["中", "market", "盘面观察", "资金与热点变化"], ["晚", "insight", "投资认知", "一个常见误区"]] },
+      { day: "周三", index: 3, slots: [["早", "market", "盘面观察", "周中结构观察"], ["中", "insight", "投资认知", "纪律、仓位、人性"], ["晚", "life", "生活日常", "运动、家庭、夜晚"]] },
+      { day: "周四", index: 4, slots: [["早", "life", "生活日常", "普通小事与状态"], ["中", "market", "盘面观察", "分化与风险信号"], ["晚", "insight", "投资认知", "等待与选择"]] },
+      { day: "周五", index: 5, slots: [["早", "market", "盘面观察", "本周最后交易日"], ["中", "insight", "投资认知", "本周得到的启发"], ["晚", "life", "生活日常", "周末感、聚餐、休息"]] }
+    ];
+    let phrases = {
+      "生活日常": ["本来只想下楼走十分钟，结果晚风太舒服，又多绕了两条街。", "今天没安排什么特别的事。认真吃饭，慢慢走路，也算把生活过回来了。", "做饭水平没有明显进步，洗碗速度倒是越来越快了。"],
+      "投资心得与认知": ["看对方向不等于拿得到结果。仓位、节奏和情绪，少一个都可能把正确的判断做错。", "计划的价值，不是保证每次都对，而是在市场热闹的时候，提醒自己别被情绪临时改写。", "投资并不奖励一直忙碌的人。很多时候，耐心等待也是决策的一部分。"],
+      "盘面观察": ["今天真正值得看的，不只是指数颜色，而是分歧出现以后，核心方向还有没有资金愿意接。", "市场不会每天都给清晰答案。信号不够的时候，少做判断本身也是一种判断。", "一波上涨之后，分歧并不可怕。更需要观察的是，分歧之后资金选择留下还是离开。"],
+      "营销配图文案": ["这次不讲太多漂亮话，只想把真正能用上的方法说明白。", "适合正在重新梳理思路的人。先看看内容是否解决你的问题，需要的话再来聊。", "图里是这次的核心安排。正文不堆信息，时间和方式我放在评论区。"]
+    };
+
+    function renderFields() {
+      document.querySelector("#dynamicFields").innerHTML = fields[state.category];
+      document.querySelector("#formTitle").textContent = categoryMeta[state.category].title;
+      document.querySelector("#generateBtn").textContent = categoryMeta[state.category].button;
+      if (state.category === "marketing") bindImageInput();
+    }
+    function bindImageInput() {
+      document.querySelector("#imageInput").addEventListener("change", async event => {
+        const file = event.target.files[0];
+        if (!file) return;
+        if (file.size > 8 * 1024 * 1024) return showError("图片不能超过 8MB。");
+        try {
+          state.imageDataUrl = await compressImage(file);
+          const preview = document.querySelector("#preview");
+          preview.src = state.imageDataUrl;
+          preview.hidden = false;
+          document.querySelector("#uploadPrompt").hidden = true;
+        } catch {
+          showError("图片读取失败，请换一张图片重试。");
+        }
+      });
+    }
+    function compressImage(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = reject;
+        reader.onload = () => {
+          const image = new Image();
+          image.onerror = reject;
+          image.onload = () => {
+            const maxSide = 1800;
+            const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+            canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+            const context = canvas.getContext("2d");
+            context.fillStyle = "#fff";
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            context.drawImage(image, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL("image/jpeg", .9));
+          };
+          image.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+    function formData() {
+      const get = id => document.querySelector("#" + id)?.value?.trim() || "";
+      const common = { category: state.category, extra: get("extra"), voice: get("voice") };
+      if (state.category === "life") return { ...common, scene: get("scene"), mood: get("mood"), tone: get("lifeTone") };
+      if (state.category === "insight") return { ...common, topic: get("topic"), example: get("example"), audienceEmotion: get("audienceEmotion") };
+      if (state.category === "market") return { ...common, marketState: get("marketState"), hotspot: get("hotspot"), signal: get("signal"), stance: get("stance") };
+      return { ...common, image: state.imageDataUrl, goal: get("marketingGoal"), context: get("marketingContext") };
+    }
+    function escapeHtml(text) {
+      return String(text).replace(/[&<>"']/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;" })[char]);
+    }
+    function showError(message) {
+      document.querySelector("#results").innerHTML = `<div class="error">${escapeHtml(message)}</div>`;
+    }
+    function toast(message = "已复制") {
+      const el = document.querySelector("#toast"); el.textContent = message; el.classList.add("show");
+      setTimeout(() => el.classList.remove("show"), 1400);
+    }
+    async function copyText(text) {
+      try { await navigator.clipboard.writeText(text); }
+      catch {
+        const area = document.createElement("textarea"); area.value = text; document.body.appendChild(area);
+        area.select(); document.execCommand("copy"); area.remove();
+      }
+      toast();
+    }
+    async function apiFetch(path, options = {}, canAskForCode = true) {
+      const code = localStorage.getItem(ACCESS_STORAGE_KEY) || "";
+      const headers = { ...(options.headers || {}) };
+      if (code) headers["X-Access-Code"] = code;
+      const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
+      if (response.status === 401 && canAskForCode) {
+        localStorage.removeItem(ACCESS_STORAGE_KEY);
+        const nextCode = await requestAccessCode();
+        if (!nextCode) return response;
+        localStorage.setItem(ACCESS_STORAGE_KEY, nextCode.trim());
+        const retry = await apiFetch(path, options, false);
+        if (retry.status === 401) {
+          localStorage.removeItem(ACCESS_STORAGE_KEY);
+          document.querySelector("#accessError").textContent = "口令不正确，请重新输入。";
+          return apiFetch(path, options, true);
+        }
+        return retry;
+      }
+      return response;
+    }
+    function requestAccessCode() {
+      const dialog = document.querySelector("#accessDialog");
+      const input = document.querySelector("#accessCodeInput");
+      document.querySelector("#accessError").textContent = "";
+      input.value = "";
+      dialog.showModal();
+      setTimeout(() => input.focus(), 0);
+      return new Promise(resolve => { pendingAccessResolve = resolve; });
+    }
+    document.querySelector("#accessForm").addEventListener("submit", event => {
+      event.preventDefault();
+      const value = document.querySelector("#accessCodeInput").value.trim();
+      if (!value) {
+        document.querySelector("#accessError").textContent = "请输入团队访问口令。";
+        return;
+      }
+      document.querySelector("#accessDialog").close();
+      pendingAccessResolve?.(value);
+      pendingAccessResolve = null;
+    });
+    document.querySelector("#accessCancel").addEventListener("click", () => {
+      document.querySelector("#accessDialog").close();
+      pendingAccessResolve?.("");
+      pendingAccessResolve = null;
+    });
+    function renderResults(data) {
+      const variants = data.variants || [];
+      document.querySelector("#results").innerHTML = variants.map((item, index) => `
+        <article class="panel result-card" data-index="${index}">
+          <header class="result-head"><b>${escapeHtml(item.style)}</b><span class="badge">${escapeHtml(data.contentRole || "朋友圈文案")}</span></header>
+          <p class="copy" contenteditable="true" spellcheck="false">${escapeHtml(item.copy)}</p>
+          <div class="meta">
+            <div><b>配图建议</b>${escapeHtml(item.imageSuggestion || "使用真实素材即可")}</div>
+            <div><b>发布建议</b>${escapeHtml(item.publishNote || "按当天节奏发布")}</div>
+            ${item.commentCopy ? `<div style="grid-column:1/-1"><b>评论区补充</b>${escapeHtml(item.commentCopy)}</div>` : ""}
+          </div>
+          <div class="actions">
+            <button class="secondary retry-one">整批重写</button>
+            ${item.commentCopy ? `<button class="secondary copy-comment">复制评论区</button>` : ""}
+            <button class="copy-btn">复制正文</button>
+          </div>
+        </article>`).join("");
+      document.querySelectorAll(".result-card").forEach(card => {
+        card.querySelector(".copy-btn").addEventListener("click", () => copyText(card.querySelector(".copy").innerText.trim()));
+        card.querySelector(".retry-one").addEventListener("click", () => generate(state.lastPayload));
+        card.querySelector(".copy-comment")?.addEventListener("click", () => copyText(variants[Number(card.dataset.index)].commentCopy));
+      });
+    }
+    async function generate(payload) {
+      const button = document.querySelector("#generateBtn");
+      button.disabled = true; button.textContent = "模型正在创作...";
+      document.querySelector("#results").innerHTML = `<div class="panel empty"><div><b>正在理解素材并组织表达</b><p>生活、认知、盘面和营销使用不同的写作策略。</p></div></div>`;
+      try {
+        const response = await apiFetch("/api/generate", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "生成失败");
+        renderResults(data);
+      } catch (error) {
+        const message = error instanceof TypeError && error.message === "Failed to fetch"
+          ? "后台服务未启动。请双击“打开朋友圈内容台.command”，启动后再生成。"
+          : error.message;
+        showError(message);
+      }
+      finally { button.disabled = false; button.textContent = categoryMeta[state.category].button; }
+    }
+    function renderPhrases(library = phrases) {
+      document.querySelector("#phraseGrid").innerHTML = Object.entries(library).map(([title, items]) => `
+        <article class="panel phrase-card"><h3>${escapeHtml(title)}</h3><p>${items.map(escapeHtml).join("<br><br>")}</p><button data-copy="${escapeHtml(items.join("\\n\\n"))}">复制这组</button></article>`).join("");
+      document.querySelectorAll("[data-copy]").forEach(button => button.addEventListener("click", () => copyText(button.dataset.copy)));
+    }
+    async function loadLibrary() {
+      try {
+        const response = await apiFetch("/api/library", {}, false);
+        if (!response.ok) return;
+        const data = await response.json();
+        phrases = Object.fromEntries(Object.values(data.categories || {}).map(category => [
+          category.label,
+          category.examples
+        ]));
+        renderPhrases();
+      } catch {}
+    }
+    async function refreshPhrases() {
+      const button = document.querySelector("#refreshPhrases");
+      button.disabled = true;
+      button.textContent = "AI 正在换一批...";
+      try {
+        const response = await apiFetch("/api/phrases", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ requestId: `${Date.now()}-${Math.random()}` })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "句式生成失败");
+        renderPhrases(data.library);
+        toast("灵感已更新");
+      } catch (error) {
+        const message = error instanceof TypeError && error.message === "Failed to fetch"
+          ? "后台服务未启动。请双击“打开朋友圈内容台.command”。"
+          : error.message;
+        document.querySelector("#phraseGrid").innerHTML = `<div class="error" style="grid-column:1/-1">${escapeHtml(message)}</div>`;
+      } finally {
+        button.disabled = false;
+        button.textContent = "AI 换一批灵感";
+      }
+    }
+    document.querySelector("#generateForm").addEventListener("submit", event => {
+      event.preventDefault();
+      const payload = formData();
+      if (state.category === "marketing" && !payload.image) return showError("请先上传营销图片。");
+      if (state.category === "market" && (!payload.signal || !payload.hotspot)) return showError("请填写热点方向和盘面信号。");
+      payload.requestId = `${Date.now()}-${Math.random()}`;
+      state.lastPayload = payload;
+      generate(payload);
+    });
+    document.querySelectorAll(".category").forEach(button => {
+      button.addEventListener("click", () => {
+        state.category = button.dataset.category; state.imageDataUrl = "";
+        document.querySelectorAll(".category").forEach(item => item.classList.toggle("active", item === button));
+        renderFields();
+        const autoHint = ["life", "insight"].includes(state.category)
+          ? ["没想法也可以直接生成", "留空时 AI 会自动选择一个新角度，每次返回三种表达。"]
+          : ["填写真实素材后生成", "每次返回三种风格，选择最像业务本人的版本。"];
+        document.querySelector("#results").innerHTML = `<div class="panel empty"><div><b>${autoHint[0]}</b><p>${autoHint[1]}</p></div></div>`;
+      });
+    });
+    function switchCategory(category) {
+      const button = document.querySelector(`.category[data-category="${category}"]`);
+      if (!button) return;
+      state.category = category;
+      state.imageDataUrl = "";
+      document.querySelectorAll(".category").forEach(item => item.classList.toggle("active", item === button));
+      renderFields();
+      const auto = ["life", "insight"].includes(category);
+      document.querySelector("#results").innerHTML = `<div class="panel empty"><div><b>${auto ? "可以直接生成，也可以补充自己的素材" : "填写当天真实素材后生成"}</b><p>${auto ? "留空时 AI 会自动寻找一个新角度。" : "盘面不自动编行情，营销需要先上传图片。"}</p></div></div>`;
+    }
+    function openCreateView(category, autoGenerate = false, planNote = "") {
+      const navButton = document.querySelector('nav button[data-view="createView"]');
+      navButton.click();
+      switchCategory(category);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (autoGenerate) {
+        const payload = formData();
+        if (planNote) {
+          payload.extra = [payload.extra, `本次发布计划角度：${planNote}。围绕这个方向自由发挥，不要照抄提示词。`]
+            .filter(Boolean)
+            .join("\n");
+        }
+        payload.requestId = `${Date.now()}-${Math.random()}`;
+        state.lastPayload = payload;
+        generate(payload);
+      } else {
+        setTimeout(() => document.querySelector("#dynamicFields textarea, #dynamicFields input")?.focus(), 250);
+      }
+    }
+    document.querySelectorAll("nav button").forEach(button => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll("nav button").forEach(item => item.classList.toggle("active", item === button));
+        document.querySelectorAll(".view").forEach(view => view.hidden = view.id !== button.dataset.view);
+        const titles = {
+          createView: ["AI 文案生成", "四类内容各司其职，营销只在有素材时生成。"],
+          weekView: ["发布计划", "先看今天该发什么，再一键生成或补充当天素材。"],
+          phraseView: ["表达案例库", "借鉴表达方式，不把朋友圈写成固定模板。"]
+        };
+        document.querySelector("#pageTitle").textContent = titles[button.dataset.view][0];
+        document.querySelector("#pageSubtitle").textContent = titles[button.dataset.view][1];
+      });
+    });
+    const todayIndex = new Date().getDay();
+    const todaySchedule = week.find(item => item.index === todayIndex);
+    document.querySelector("#todayPlan").innerHTML = todaySchedule
+      ? `<div><h2>${todaySchedule.day}，今天发什么</h2><p>${todaySchedule.slots.map(slot => `${slot[0]}：${slot[2]}`).join("　")}。点击下面箭头即可开始。</p></div><span class="today-mark">今日计划</span>`
+      : `<div><h2>周六，适合休息或随手记录</h2><p>今天不设固定任务；有生活素材可以随手发，有营销活动也可以临时加发。</p></div><button class="secondary" id="saturdayLife" type="button">生成生活文案</button>`;
+    document.querySelector("#saturdayLife")?.addEventListener("click", () => openCreateView("life", true));
+    document.querySelector("#weekGrid").innerHTML = week.map(item => `
+      <article class="panel week-card ${item.index === todayIndex ? "today-card" : ""}">
+        <header class="week-card-head"><h3>${item.day}</h3>${item.index === todayIndex ? '<span class="today-label">今天</span>' : ""}</header>
+        ${item.slots.map(([time, category, type, note]) => `
+          <div class="slot">
+            <b>${time}</b>
+            <span>${type}<small>${note}</small></span>
+            <button class="slot-action" type="button" data-plan-category="${category}" data-plan-note="${escapeHtml(note)}" data-auto="${["life", "insight"].includes(category)}" title="${["life", "insight"].includes(category) ? "直接生成" : "填写素材"}" aria-label="${item.day}${time}${type}">→</button>
+          </div>`).join("")}
+        <div class="slot">
+          <b>按需</b>
+          <span>营销配图文案<small>有素材、有活动时再发</small></span>
+          <button class="slot-action" type="button" data-plan-category="marketing" data-auto="false" title="上传营销图片" aria-label="${item.day}营销配图文案">→</button>
+        </div>
+      </article>`).join("");
+    document.querySelectorAll("[data-plan-category]").forEach(button => {
+      button.addEventListener("click", () => openCreateView(
+        button.dataset.planCategory,
+        button.dataset.auto === "true",
+        button.dataset.planNote || ""
+      ));
+    });
+    renderPhrases();
+    loadLibrary();
+    document.querySelector("#refreshPhrases").addEventListener("click", refreshPhrases);
+    async function checkHealth() {
+      try {
+        const response = await apiFetch("/api/health"); const data = await response.json();
+        if (data.accessRequired && !data.authorized) {
+          document.querySelector("#statusText").textContent = "需要团队口令";
+          document.querySelector("#modelText").textContent = "首次生成时输入管理员提供的口令";
+          return;
+        }
+        document.querySelector("#statusDot").classList.toggle("ok", data.ready);
+        document.querySelector("#statusText").textContent = data.ready ? "模型已连接" : "等待配置 API Key";
+        if (data.textReady || data.visionReady) {
+          document.querySelector("#modelText").textContent =
+            `文字：${data.textModel}${data.textReady ? " 已连接" : " 未配置"} · 图片：${data.visionModel}${data.visionReady ? " 已连接" : " 未配置"}`;
+        } else {
+          document.querySelector("#modelText").textContent = "管理员请打开 /setup.html 配置模型";
+        }
+      } catch {
+        document.querySelector("#statusText").textContent = "后台服务未启动";
+        document.querySelector("#modelText").textContent = "双击“打开朋友圈内容台.command”";
+      }
+    }
+    document.querySelector("#today").textContent = new Intl.DateTimeFormat("zh-CN", { month:"long", day:"numeric", weekday:"long" }).format(new Date());
+    renderFields();
+    checkHealth();
+  </script>
+</body>
+</html>
