@@ -112,6 +112,21 @@
     .secondary, .copy-btn { height: 35px; padding: 0 12px; border-radius: 5px; font-size: 12px; }
     .secondary { border: 1px solid var(--line); background: white; color: #52605a; }
     .copy-btn { background: #1d2a26; color: white; }
+    .image-generate { border: 1px solid var(--green); background: var(--green-soft); color: var(--green); }
+    .image-generate:disabled { opacity: .55; cursor: wait; }
+    .image-stage { display: none; padding: 0 18px 16px; }
+    .image-stage.active { display: block; }
+    .image-stage img {
+      display: block; width: min(100%, 560px); aspect-ratio: 1; margin: 0 auto;
+      border: 1px solid var(--line); border-radius: 7px; background: #edf1ef; object-fit: cover;
+    }
+    .image-loading {
+      min-height: 170px; display: grid; place-items: center; padding: 20px;
+      border: 1px dashed #b9c5c0; border-radius: 7px; background: #f7f9f7;
+      color: var(--muted); font-size: 13px; text-align: center;
+    }
+    .image-actions { display: flex; justify-content: center; gap: 8px; margin-top: 10px; }
+    .image-actions a { display: inline-grid; place-items: center; text-decoration: none; }
     .error {
       padding: 14px; border: 1px solid #e6bbb5; border-radius: 7px;
       background: #fff4f2; color: var(--red); font-size: 13px; line-height: 1.6;
@@ -456,9 +471,11 @@
             <div><b>发布建议</b>${escapeHtml(item.publishNote || "按当天节奏发布")}</div>
             ${item.commentCopy ? `<div style="grid-column:1/-1"><b>评论区补充</b>${escapeHtml(item.commentCopy)}</div>` : ""}
           </div>
+          <div class="image-stage"></div>
           <div class="actions">
             <button class="secondary retry-one">整批重写</button>
             ${item.commentCopy ? `<button class="secondary copy-comment">复制评论区</button>` : ""}
+            ${state.lastPayload?.category !== "marketing" ? `<button class="secondary image-generate">AI 配一张图</button>` : ""}
             <button class="copy-btn">复制正文</button>
           </div>
         </article>`).join("");
@@ -466,7 +483,79 @@
         card.querySelector(".copy-btn").addEventListener("click", () => copyText(card.querySelector(".copy").innerText.trim()));
         card.querySelector(".retry-one").addEventListener("click", () => generate(state.lastPayload));
         card.querySelector(".copy-comment")?.addEventListener("click", () => copyText(variants[Number(card.dataset.index)].commentCopy));
+        card.querySelector(".image-generate")?.addEventListener("click", () => generateMatchingImage(
+          card,
+          variants[Number(card.dataset.index)]
+        ));
       });
+    }
+    function wait(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    async function pollImageTask(taskId) {
+      for (let attempt = 0; attempt < 40; attempt += 1) {
+        await wait(1500);
+        const response = await apiFetch(`/api/image/status?taskId=${encodeURIComponent(taskId)}`);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "图片生成失败");
+        if (data.status === "SUCCEEDED" && data.imageUrl) return data.imageUrl;
+      }
+      throw new Error("图片生成时间较长，请稍后重新尝试。");
+    }
+    async function downloadImage(url) {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error();
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = `朋友圈配图-${Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      } catch {
+        window.open(url, "_blank", "noopener");
+        toast("图片已打开，请长按或右键保存");
+      }
+    }
+    async function generateMatchingImage(card, variant) {
+      const button = card.querySelector(".image-generate");
+      const stage = card.querySelector(".image-stage");
+      button.disabled = true;
+      button.textContent = "正在配图...";
+      stage.classList.add("active");
+      stage.innerHTML = `<div class="image-loading">AI 正在根据这版文案构图，通常需要 10-30 秒。<br>请不要关闭页面。</div>`;
+      try {
+        const response = await apiFetch("/api/image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            category: state.lastPayload?.category || "life",
+            copy: card.querySelector(".copy").innerText.trim(),
+            imageSuggestion: variant.imageSuggestion || "",
+            style: variant.style || ""
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "图片任务创建失败");
+        const imageUrl = await pollImageTask(data.taskId);
+        stage.innerHTML = `
+          <img src="${escapeHtml(imageUrl)}" alt="AI 生成的朋友圈配图">
+          <div class="image-actions">
+            <button class="secondary regenerate-image" type="button">换一张</button>
+            <button class="copy-btn download-image" type="button">保存图片</button>
+          </div>`;
+        stage.querySelector(".regenerate-image").addEventListener("click", () => generateMatchingImage(card, variant));
+        stage.querySelector(".download-image").addEventListener("click", () => downloadImage(imageUrl));
+        toast("配图已生成，请及时保存");
+      } catch (error) {
+        stage.innerHTML = `<div class="error">${escapeHtml(error.message || "图片生成失败，请重试。")}</div>`;
+      } finally {
+        button.disabled = false;
+        button.textContent = "AI 配一张图";
+      }
     }
     async function generate(payload) {
       const button = document.querySelector("#generateBtn");
