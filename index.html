@@ -722,7 +722,7 @@
         document.querySelector("#statusText").textContent = data.ready ? "模型已连接" : "等待配置 API Key";
         if (data.textReady || data.visionReady) {
           document.querySelector("#modelText").textContent =
-            `文字：${data.textModel}${data.textReady ? " 已连接" : " 未配置"} · 图片：${data.visionModel}${data.visionReady ? " 已连接" : " 未配置"}`;
+            `文字：${data.textReady ? "已连接" : "未配置"} · 读图：${data.visionReady ? "已连接" : "未配置"} · 配图：${data.imageGenerationReady ? "已连接" : "未配置"}`;
         } else {
           document.querySelector("#modelText").textContent = "管理员请打开 /setup.html 配置模型";
         }
